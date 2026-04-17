@@ -1,7 +1,7 @@
-// pipln var — Pipeline Variable Store
-// Injected into every pipeline process' context.
-// Acts as a large hashmap with atomic edit methods and full git-like history tracking.
-// Remains fully in-memory.
+// pipln var :: Pipeline Variable Store
+// Injected into every pipeline process' context
+// Acts as a large hashmap with atomic edit methods and full git-like history tracking
+// Remains fully in-memory
 
 class PiplnVar {
   constructor(initialData = {}) {
@@ -9,8 +9,6 @@ class PiplnVar {
     this._history = []; // array of { op, key, prev, next, ts }
     this.cbk = "piplnVar";
   }
-
-  // ── Read ────────────────────────────────────────────────────────────────────
 
   get(key) {
     return this._data[key];
@@ -23,8 +21,6 @@ class PiplnVar {
   snapshot() {
     return { ...this._data };
   }
-
-  // ── Atomic write ops (each logged to history) ───────────────────────────────
 
   set(key, value) {
     const prev = this._data[key];
@@ -46,25 +42,20 @@ class PiplnVar {
     return this;
   }
 
-  // Merge an object of key/value pairs atomically (one history entry per key)
   merge(obj) {
     for (const k in obj) this.set(k, obj[k]);
     return this;
   }
 
-  // Increment a numeric key atomically
   increment(key, by = 1) {
     const prev = this._data[key] || 0;
     return this.set(key, prev + by);
   }
 
-  // ── History ─────────────────────────────────────────────────────────────────
-
   history() {
     return [...this._history];
   }
 
-  // Undo last atomic op
   undo() {
     const last = this._history.pop();
     if (!last) return this;
@@ -78,7 +69,6 @@ class PiplnVar {
     return this;
   }
 
-  // Export / import for Ins Manager protocol
   exportState() {
     return { data: this.snapshot(), history: this.history() };
   }
@@ -97,7 +87,6 @@ function create(ctx) {
     cbk: "piplnVar",
     id: `piplnVar_${Date.now()}`,
     ins: instance,
-    // Expose methods directly on the returned object too (convenience)
     get: (k) => instance.get(k),
     set: (k, v) => instance.set(k, v),
     delete: (k) => instance.delete(k),
@@ -107,7 +96,7 @@ function create(ctx) {
     snapshot: () => instance.snapshot(),
     history: () => instance.history(),
     undo: () => instance.undo(),
-    // Ins Manager protocol
+
     init() {},
     despawn() {
       instance._history = [];

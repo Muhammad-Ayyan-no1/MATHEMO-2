@@ -1,14 +1,5 @@
-// CBK — Code Base Keywords
-// Used as the standard naming protocol between all processes, sub-processes, pipelines, tasks and instances.
-// Also used in logger, CLI, and debugger.
-// Also used as keys for hashmaps passed between processes.
-//
-// Naming protocol:
-//   Short abbreviations (cbk, ins, pipln, etc.) map to full human-readable names.
-//   r_<number>        → ordinal result label  (r_1 → "first result")
-//   C_<kw1> <kw2>... → chain of abbreviations decoded in sequence
+import { CBK_MAP } from "../constants/index.js";
 
-// Simple ordinal function
 function toOrdinal(num) {
   const j = num % 10;
   const k = num % 100;
@@ -18,69 +9,21 @@ function toOrdinal(num) {
   return num + "th";
 }
 
-let map = {
-  // Core system
-  cbk: "Code Base Keywords",
-  cbkM: "Code Base Map of Keywords",
-  ins: "Instance",
-  insM: "Instance Manager",
+let map = CBK_MAP;
 
-  // Pipeline
-  pipln: "Pipeline",
-  piplnMgr: "Pipeline Manager",
-  piplnExe: "Pipeline Executor",
-  piplnCond: "Pipeline Condition",
-  piplnVar: "Pipeline Variable",
-  piplnHist: "Pipeline History",
-  task: "Task",
-  taskPrams: "Task Parameters",
-
-  // System processes
-  autoLog: "Auto Logger",
-  dbg: "Debugger",
-  autoCLI: "Auto Command Line Interface",
-
-  // Instance lifecycle
-  init: "Initialise",
-  despawn: "Despawn",
-  expState: "Export State",
-  impState: "Import State",
-
-  // Operations
-  add: "Add",
-  del: "Delete",
-  upd: "Update",
-  read: "Read",
-  run: "Run",
-  pause: "Pause",
-  resume: "Resume",
-
-  // Misc
-  ctx: "Context",
-  prams: "Parameters",
-  sel: "Selections",
-  cond: "Condition",
-  hist: "History",
-  id: "Identifier",
-};
-
-// Build inverted map: full name → abbreviation
 let inverted = (() => {
   let r = {};
   for (const k in map) r[map[k]] = k;
   return r;
 })();
 
-// fullMap supports lookup in both directions
 let fullMap = { ...map, ...inverted };
 
-// Add _underscore_ variants so pipeline hashmap keys printed with underscores still resolve
 for (const k in { ...map }) {
   const underscored = k.replace(/ /g, "_");
   fullMap["_" + underscored + "_"] = map[k] ? map[k].replace(/ /g, "_") : k;
 }
 
-// r_<digits>  →  "Nth result"
 function resultNum(str) {
   if (!str || !str.match(/^r_*[0-9]+$/)) return false;
   const num = Number(str.replace(/^r_*/, ""));
@@ -88,11 +31,9 @@ function resultNum(str) {
   return (ordinal || num + "th") + " result";
 }
 
-// C_<kw1> <kw2> ... → decodes chain of CBK abbreviations into human readable string
-// prefix must be "C_" (not "C__")
 function chainAbbreviations(str) {
   if (!str || !str.startsWith("C_") || str.startsWith("C__")) return false;
-  const body = str.slice(2); // strip "C_"
+  const body = str.slice(2);
   const parts = body.split(" ");
   const result = parts
     .map((p) => {
@@ -103,14 +44,11 @@ function chainAbbreviations(str) {
   return result || false;
 }
 
-// Primary public API — resolve any CBK string
 function get(item) {
   if (item === undefined || item === null) return false;
   return fullMap[item] || resultNum(item) || chainAbbreviations(item) || false;
 }
 
-// Store — pipeline-compatible hashmap with CBK keys
-// Every value stored/retrieved uses CBK keys so processes stay compatible
 class Store {
   constructor() {
     this._data = {};
@@ -147,14 +85,13 @@ class Store {
 function create() {
   const store = new Store();
   return {
-    cbk: "cbk", // CBK name for this instance
+    cbk: "cbk",
     id: `cbk_${Date.now()}`,
     get,
     map,
     inverted,
     fullMap,
     store,
-    // Lifecycle stubs (used by Ins Manager protocol)
     init() {},
     despawn() {},
     exportState() {

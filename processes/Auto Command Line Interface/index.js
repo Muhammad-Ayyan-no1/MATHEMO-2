@@ -1,58 +1,88 @@
-// auto cli — Auto Command Line Interface Process
-// Optional process — injects itself into pipeline context (taskPrams.cli).
-// Passes parameters to specific pipelines at runtime.
-// Shows pipeline context/state outputs to user.
-// Can be started standalone via CLI.js (runs entire codebase too).
-// Uses oclif, chalk, boxen, ora, inquirer.
+﻿import { get as cbkGet } from "../Code Base Keywords/index.js";
+import { HEADER_OPTIONS, CLI_CHOICES } from "../constants/index.js";
 
-import chalk from "chalk";
-import boxen from "boxen";
-import ora from "ora";
-import inquirer from "inquirer";
-import { get as cbkGet } from "../Code Base Keywords/index.js";
-
-// ── Formatting helpers ────────────────────────────────────────────────────────
-
-function header(title) {
-  return boxen(chalk.bold.white(title), {
-    padding: 1,
-    margin: 1,
-    borderStyle: "round",
-    borderColor: "cyan",
-  });
+function _safeLoad(lib, name, fallback) {
+  if (!lib) return fallback;
+  if (typeof lib.get === "function") return lib.get(name) || fallback;
+  if (typeof lib.load === "function")
+    return lib.load(name).catch(() => fallback);
+  return fallback;
 }
-
-function renderState(state) {
-  if (!state || typeof state !== "object") return chalk.dim("(empty)");
-  const lines = Object.entries(state).map(([k, v]) => {
-    const humanKey = cbkGet(k) || k;
-    return `  ${chalk.cyan(humanKey)}: ${chalk.white(JSON.stringify(v))}`;
-  });
-  return lines.join("\n");
-}
-
-// ── AutoCLI class ─────────────────────────────────────────────────────────────
 
 class AutoCLI {
   constructor(options = {}) {
     this._active = options.active !== false;
     this._logger = options.logger || null;
+    this._lib = options.lib || null;
     this._spinner = null;
   }
 
-  // ── Output ─────────────────────────────────────────────────────────────────
+  _chalk() {
+    return _safeLoad(this._lib, "chalk", {
+      bold: { white: (value) => String(value ?? "") },
+      white: (value) => String(value ?? ""),
+      cyan: (value) => String(value ?? ""),
+      dim: (value) => String(value ?? ""),
+      magenta: { bold: (value) => String(value ?? "") },
+    });
+  }
+
+  _boxen() {
+    return _safeLoad(this._lib, "boxen", (text) => String(text ?? ""));
+  }
+
+  _ora() {
+    return _safeLoad(this._lib, "ora", () => ({
+      text: "",
+      start() {
+        return this;
+      },
+      succeed() {
+        return this;
+      },
+      fail() {
+        return this;
+      },
+    }));
+  }
+
+  _inquirer() {
+    return _safeLoad(this._lib, "inquirer", {
+      prompt: async (questions) => {
+        if (!Array.isArray(questions)) return {};
+        return questions.reduce((result, question) => {
+          if (question && question.name) {
+            result[question.name] = question.default ?? null;
+          }
+          return result;
+        }, {});
+      },
+    });
+  }
 
   showOutput(cbkKey, data, title) {
     if (!this._active) return;
+    const chalk = this._chalk();
     const humanCbk = cbkGet(cbkKey) || cbkKey;
     const t = title || `Output: ${humanCbk}`;
-    console.log(header(t));
+    const boxen = this._boxen();
+    console.log(boxen(chalk.bold.white(t), HEADER_OPTIONS));
     if (data && typeof data === "object") {
-      console.log(renderState(data));
+      console.log(this.renderState(data));
     } else {
       console.log(chalk.white(data));
     }
     console.log();
+  }
+
+  renderState(state) {
+    const chalk = this._chalk();
+    if (!state || typeof state !== "object") return chalk.dim("(empty)");
+    const lines = Object.entries(state).map(([key, value]) => {
+      const humanKey = cbkGet(key) || key;
+      return `  ${chalk.cyan(humanKey)}: ${chalk.white(JSON.stringify(value))}`;
+    });
+    return lines.join("\n");
   }
 
   showPipelineState(taskPrams) {
@@ -64,48 +94,51 @@ class AutoCLI {
     );
   }
 
-  // ── Input ──────────────────────────────────────────────────────────────────
-
-  // Prompt user to pass a value into a pipeline parameter at runtime
-  async prompt(questions) {
-    if (!this._active) return {};
-    return inquirer.prompt(questions);
+  header(text) {
+    if (!this._active) return text;
+    const chalk = this._chalk();
+    const boxen = this._boxen();
+    return boxen(chalk.bold.white(text), HEADER_OPTIONS);
   }
 
-  // Ask user to pick which pipeline to run next
+  async prompt(questions) {
+    if (!this._active) return {};
+    return this._inquirer().prompt(questions);
+  }
+
   async pickPipeline(pipelineNames) {
     if (!this._active || !pipelineNames.length) return null;
+    const inquirer = this._inquirer();
     const { selected } = await inquirer.prompt([
       {
         type: "list",
         name: "selected",
         message: "Select a pipeline to run:",
-        choices: pipelineNames.map((n) => ({ name: cbkGet(n) || n, value: n })),
+        choices: pipelineNames.map((name) => ({
+          name: cbkGet(name) || name,
+          value: name,
+        })),
       },
     ]);
     return selected;
   }
 
-  // Used by debugger when breakpoint is hit — lets user inspect/continue live
   async promptDebug(taskPrams, dbgInstance) {
     if (!this._active) return;
+    const chalk = this._chalk();
     console.log(
       chalk.magenta.bold(
         "\n[DEBUGGER] Breakpoint hit. Current pipeline state:",
       ),
     );
     this.showPipelineState(taskPrams);
+    const inquirer = this._inquirer();
     const { action } = await inquirer.prompt([
       {
         type: "list",
         name: "action",
         message: "Debugger action:",
-        choices: [
-          { name: "Continue", value: "continue" },
-          { name: "Show piplnVar history", value: "history" },
-          { name: "Show piplnMgr history", value: "mgrHistory" },
-          { name: "Deactivate debugger", value: "deactivate" },
-        ],
+        choices: CLI_CHOICES,
       },
     ]);
     if (action === "history" && dbgInstance)
@@ -113,13 +146,12 @@ class AutoCLI {
     if (action === "mgrHistory" && dbgInstance)
       dbgInstance.showPiplnMgrHistory(taskPrams);
     if (action === "deactivate" && dbgInstance) dbgInstance.deactivate();
-    // "continue" falls through and returns
   }
 
-  // ── Spinner ────────────────────────────────────────────────────────────────
   startSpinner(text) {
-    this._spinner = ora(text).start();
+    this._spinner = this._ora(text).start();
   }
+
   stopSpinner(success = true, text) {
     if (!this._spinner) return;
     success ? this._spinner.succeed(text) : this._spinner.fail(text);
@@ -129,22 +161,26 @@ class AutoCLI {
   activate() {
     this._active = true;
   }
+
   deactivate() {
     this._active = false;
   }
+
   isActive() {
     return this._active;
   }
 }
 
-// ── Inject helper ─────────────────────────────────────────────────────────────
 function inject(taskPrams, options) {
-  const cli = new AutoCLI({ ...options, logger: taskPrams.logger });
+  const cli = new AutoCLI({
+    ...options,
+    logger: taskPrams.logger,
+    lib: options.lib || taskPrams.lib,
+  });
   taskPrams.cli = cli;
   return cli;
 }
 
-// ── create — Ins Manager Protocol ────────────────────────────────────────────
 function create(ctx) {
   const options = ctx || {};
   const cli = new AutoCLI(options);
@@ -152,20 +188,18 @@ function create(ctx) {
     cbk: "autoCLI",
     id: `autoCLI_${Date.now()}`,
     ins: cli,
-    // Convenience pass-throughs
-    showOutput: (...a) => cli.showOutput(...a),
-    showPipelineState: (tp) => cli.showPipelineState(tp),
-    prompt: (q) => cli.prompt(q),
+    showOutput: (...args) => cli.showOutput(...args),
+    showPipelineState: (taskPrams) => cli.showPipelineState(taskPrams),
+    header: (text) => cli.header(text),
+    prompt: (questions) => cli.prompt(questions),
     pickPipeline: (names) => cli.pickPipeline(names),
-    promptDebug: (tp, d) => cli.promptDebug(tp, d),
-    startSpinner: (t) => cli.startSpinner(t),
-    stopSpinner: (s, t) => cli.stopSpinner(s, t),
+    promptDebug: (taskPrams, dbgInstance) =>
+      cli.promptDebug(taskPrams, dbgInstance),
+    startSpinner: (text) => cli.startSpinner(text),
+    stopSpinner: (success, text) => cli.stopSpinner(success, text),
     activate: () => cli.activate(),
     deactivate: () => cli.deactivate(),
     inject,
-    header,
-    renderState,
-    // Ins Manager protocol
     init() {},
     despawn() {
       cli.deactivate();
@@ -179,4 +213,4 @@ function create(ctx) {
   };
 }
 
-export { create, AutoCLI, inject, header, renderState };
+export { create, AutoCLI, inject };
