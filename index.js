@@ -16,7 +16,7 @@ async function bootstrap() {
 
   const logger = await insManager.spawn(loggerModule, {
     active: true,
-    prefix: "<Template fillout>",
+    prefix: "MaTHEmO v=P2",
     lib: library.ins,
   });
 

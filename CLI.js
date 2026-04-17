@@ -5,7 +5,7 @@ import { bootstrap } from "./index.js";
 async function main() {
   const { piplnMgr, cli, logger, taskPrams } = await bootstrap();
 
-  console.log(cli.header("<Template fillout> — System CLI"));
+  console.log(cli.header("MaTHEmO v=P2"));
 
   const available = piplnMgr.list();
   if (available.length === 0) {
