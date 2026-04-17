@@ -9,10 +9,7 @@ async function main() {
 
   const available = piplnMgr.list();
   if (available.length === 0) {
-    logger.warn(
-      "autoCLI",
-      "No pipelines registered yet. Add pipelines in index.js.",
-    );
+    logger.warn("autoCLI", "No pipelines registered yet. Add pipelines.");
     return;
   }
 

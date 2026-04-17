@@ -33,20 +33,20 @@ async function bootstrap() {
 
   const piplnMgr = await insManager.spawn(piplnMgrModule, {
     pipelines: {
-      "hello-world": [
-        {
-          id: "greet",
-          cbk: "greet",
-          task: async (taskPrams) => {
-            taskPrams.logger.info(
-              "greet",
-              "Hello, World! This is a test pipeline.",
-            );
-            return "Pipeline executed successfully";
-          },
-          prams: {},
-        },
-      ],
+      // "hello-world": [
+      //   {
+      //     id: "greet",
+      //     cbk: "greet",
+      //     task: async (taskPrams) => {
+      //       taskPrams.logger.info(
+      //         "greet",
+      //         "Hello, World! This is a test pipeline.",
+      //       );
+      //       return "Pipeline executed successfully";
+      //     },
+      //     prams: {},
+      //   },
+      // ],
     },
   });
 
@@ -64,7 +64,7 @@ async function bootstrap() {
     lib: library.ins,
   };
 
-  await piplnMgr.switchPipeline("hello-world", taskPrams);
+  // await piplnMgr.switchPipeline("hello-world", taskPrams);
 
   return {
     insManager,
