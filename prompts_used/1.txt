@@ -1,0 +1,3 @@
+i have rough code sketch of everything, wire and implement it, it might be verbose but not complex. also i want you to fully comply the readme and make everything consistent as well as consistent with CBK
+
+lemme share you full codebase including npm packages so you dont need to install yourself also do fully comply with all readmes, as well as try using less comands by merging multiple commands together (you have max command limit)    also i see you have quit drifted from orignal inetnds of rough code & readme!  do not do that
