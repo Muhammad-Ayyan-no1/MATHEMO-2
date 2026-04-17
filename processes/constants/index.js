@@ -31,6 +31,10 @@ const CBK_MAP = {
   cond: "Condition",
   hist: "History",
   id: "Identifier",
+
+  // MATHEMO stuff / superoptimizer
+  MaTHEmO: "Math Turring complete Hardware Emulation for Optimization",
+  "v=P2": "2nd Production Version",
 };
 
 const LOG_LEVELS = {
