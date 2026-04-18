@@ -1,4 +1,4 @@
-import { parse } from "./main";
+import { parse } from "./main.js";
 
 function create(ctx) {
   return {
