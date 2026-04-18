@@ -1,5 +1,11 @@
 /*
-{{{{mem x123=321;};}} if (x123) {mem x321 = 1;}; }
+function abc(a, b){
+mem x = 5;
+mem a = 1;
+if (x) return x;
+else return a;
+}
+abc(1,2);
 */
 
 start
@@ -9,23 +15,49 @@ statment
 = blockStatment / memStat / ifElseStatment / ifStatment / functionStat optionalStatementTerminator
 
 
+functionAllowedStatments
+= returnStat / blockStatment / memStat / ifElseStatment_fn / ifStatment_fn
+
+returnStat
+= extraToks "return" extraToks memName extraToks optionalStatementTerminator
+
 functionStat
-= extraToks "function" extraToks memName extraToks "(" extraToks functionPramsArgs extraToks ")" statment
+= extraToks "function" extraToks memName extraToks "(" extraToks functionPrams extraToks ")" functionAllowedStatments
 
 functionCall
-= extraToks memName extraToks "(" extraToks functionPramsArgs extraToks")" optionalStatementTerminator
+= extraToks memName extraToks "(" extraToks functionArgs extraToks")" optionalStatementTerminator
 
-functionPramsArgs
-= extraToks pramarg* extraToks
+functionPrams
+= extraToks prams* extraToks
 
-pramarg
+functionArgs
+= extraToks args* extraToks
+
+prams
 = extraToks memName optionalComma extraToks
+
+args
+= extraToks callableNames optionalComma extraToks
+
+callableNames
+= data/memName
 
 optionalComma
 = "," ? extraToks
 
 ifStatment
 = extraToks "if" extraToks "(" extraToks cond:ifCondition extraToks ")" extraToks code:statment {
+    return {
+        type : "ifCondition",
+        value : {
+            condition : cond,
+            code : code,
+        }
+    }
+}
+
+ifStatment_fn
+= extraToks "if" extraToks "(" extraToks cond:ifCondition extraToks ")" extraToks code:functionAllowedStatments {
     return {
         type : "ifCondition",
         value : {
@@ -46,8 +78,27 @@ ifElseStatment
     }
 }
 
-elseStatment 
+ifElseStatment_fn
+= ifPart:ifStatment elsePart:elseStatment_fn {
+    return {
+        type : "ifElseCondition",
+        value : {
+            ifPart : ifPart,
+            elsePart : elsePart
+        }
+    }
+}
+
+elseStatment
 = extraToks code:statment {
+    return {
+        type : "elseCondition",
+        value : code,
+    }
+}
+
+elseStatment_fn
+= extraToks code:functionAllowedStatments {
     return {
         type : "elseCondition",
         value : code,
