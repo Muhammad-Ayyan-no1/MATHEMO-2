@@ -1,311 +1,179 @@
 /*
 
 Syntaxes :-
-mem statement :
-        mem location/VarName = data;
 
-if statement :-
-        if (condition) code [else code]
+mem statment :
+
+        mem location/varName = data;
+
+if statment :- 
+
+        if (memLocation/VarName) code else code
 
 functions :-
-        function name(param1, param2, ...) code;
+
+        function name(pram1, pram2, ...) code;
+
+*/
+
+/*
+
+A statment is multiple syntax.
+
+For example for a simple statment    var name = data;   data and name are seperate syntax
 
 */
 
 class TokenStream {
   constructor(tokens) {
-    this.tokens = Array.isArray(tokens) ? tokens : tokens?.tokens || [];
+    this.tokens = tokens;
+
     this.pos = 0;
   }
+
   peek(offset = 0) {
     return this.tokens[this.pos + offset];
   }
+
   consume() {
     return this.tokens[this.pos++];
   }
+
   save() {
     return this.pos;
   }
+
   restore(pos) {
     this.pos = pos;
   }
 }
 
-function tokenIs(token, type, value) {
-  return token && token.type === type && token.value === value;
-}
+const syntaxes = {
+  data: {
+    /*
 
-function isIdentifier(token) {
-  return token && token.type === "identifier";
-}
+Supported data syntaxes :
 
-function isNumberToken(token) {
-  return token.type === "number";
-}
+integers positive/negative
 
-function parsePrimary(stream) {
-  const token = stream.peek();
-  if (!token) return null;
+    */
 
-  if (isIdentifier(token)) {
-    stream.consume();
-    return { nodeCBK: "identifier", meta: { name: token.value }, children: [] };
-  }
+    test: () => {},
 
-  if (isNumberToken(token)) {
-    stream.consume();
-    return {
-      nodeCBK: "number",
-      meta: { value: Number(token.value) },
-      children: [],
-    };
-  }
+    parse: () => {},
+  },
 
-  if (tokenIs(token, "token", "(")) {
-    stream.consume();
-    const children = [];
-    while (stream.peek() && !tokenIs(stream.peek(), "token", ")")) {
-      const child = parsePrimary(stream);
-      if (child) {
-        children.push(child);
-        continue;
+  positiveInteger: {
+    // 123  or +123
+
+    test: () => {},
+
+    parse: () => {},
+  },
+
+  negativeInteger: {
+    // -123
+
+    test: () => {},
+
+    parse: () => {},
+  },
+};
+
+const statments = {
+  memoryStatment: {
+    /* 
+
+    mem location = data;
+
+    OR
+
+    mem varName = data;
+
+    */
+
+    test: (stream, testParse) => {},
+
+    parse: (stream, parse) => {},
+  },
+};
+
+//It is like parse but it only returns true/false stack that is for recursive used to test syntax
+
+function testParse(tokenized, selections = statments) {
+  const stream = new TokenStream(tokenized);
+
+  let R = [];
+
+  while (stream.peek()) {
+    let r = false;
+
+    for (const selection in selections) {
+      const saved = stream.save();
+
+      if (selections[selection].test(stream, testParse)) {
+        r = selection;
+
+        break;
       }
-      const raw = stream.consume();
-      children.push({
-        nodeCBK: "token",
-        meta: { value: raw.value, type: raw.type },
-        children: [],
-      });
-    }
-    if (tokenIs(stream.peek(), "token", ")")) stream.consume();
-    return { nodeCBK: "rawExpression", meta: {}, children };
-  }
 
-  return null;
-}
-
-function parseData(stream) {
-  return parsePrimary(stream);
-}
-
-function parseMemLocOrVarName(stream) {
-  const token = stream.peek();
-  if (isNumberToken(token)) {
-    const numberNode = parsePrimary(stream);
-    return {
-      nodeCBK: "memLoc",
-      meta: { value: numberNode.meta.value },
-      children: [],
-    };
-  }
-  if (isIdentifier(token)) {
-    const identifierNode = parsePrimary(stream);
-    return {
-      nodeCBK: "varName",
-      meta: { name: identifierNode.meta.name },
-      children: [],
-    };
-  }
-  return null;
-}
-
-function parseMemoryStatement(stream) {
-  const start = stream.save();
-  if (!isIdentifier(stream.peek()) || stream.peek().value !== "mem") {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const target = parseMemLocOrVarName(stream);
-  if (!target) {
-    stream.restore(start);
-    return null;
-  }
-
-  if (!tokenIs(stream.peek(), "token", "=")) {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const data = parseData(stream);
-  if (!data) {
-    stream.restore(start);
-    return null;
-  }
-
-  if (tokenIs(stream.peek(), "token", ";")) stream.consume();
-  return { nodeCBK: "memoryStatement", meta: {}, children: [target, data] };
-}
-
-function parseReturnStatement(stream) {
-  const start = stream.save();
-  if (!isIdentifier(stream.peek()) || stream.peek().value !== "return") {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const value = parseData(stream);
-  if (!value) {
-    stream.restore(start);
-    return null;
-  }
-
-  if (tokenIs(stream.peek(), "token", ";")) stream.consume();
-  return { nodeCBK: "returnStatement", meta: {}, children: [value] };
-}
-
-function parseCodeBlock(stream) {
-  if (!tokenIs(stream.peek(), "token", "{")) return null;
-  stream.consume();
-
-  const children = [];
-  while (stream.peek() && !tokenIs(stream.peek(), "token", "}")) {
-    const statement = parseStatement(stream);
-    if (!statement) {
-      stream.consume();
-      continue;
-    }
-    children.push(statement);
-  }
-
-  if (tokenIs(stream.peek(), "token", "}")) stream.consume();
-  return { nodeCBK: "codeBlock", meta: {}, children };
-}
-
-function parseIfStatement(stream) {
-  const start = stream.save();
-  if (!isIdentifier(stream.peek()) || stream.peek().value !== "if") {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  if (!tokenIs(stream.peek(), "token", "(")) {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const condition = parseData(stream);
-  if (!condition || !tokenIs(stream.peek(), "token", ")")) {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const thenStatement = parseStatement(stream);
-  if (!thenStatement) {
-    stream.restore(start);
-    return null;
-  }
-
-  let elseStatement = null;
-  if (isIdentifier(stream.peek()) && stream.peek().value === "else") {
-    stream.consume();
-    elseStatement = parseStatement(stream);
-    if (!elseStatement) {
-      stream.restore(start);
-      return null;
-    }
-  }
-
-  const children = [condition, thenStatement];
-  if (elseStatement) children.push(elseStatement);
-  return { nodeCBK: "ifStatement", meta: {}, children };
-}
-
-function parseFunctionDeclaration(stream) {
-  const start = stream.save();
-  if (!isIdentifier(stream.peek()) || stream.peek().value !== "function") {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  if (!isIdentifier(stream.peek())) {
-    stream.restore(start);
-    return null;
-  }
-  const name = stream.consume().value;
-
-  if (!tokenIs(stream.peek(), "token", "(")) {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const params = [];
-  while (stream.peek() && !tokenIs(stream.peek(), "token", ")")) {
-    if (isIdentifier(stream.peek())) {
-      params.push(stream.consume().value);
-      continue;
-    }
-    if (tokenIs(stream.peek(), "token", ",")) {
-      stream.consume();
-      continue;
-    }
-    stream.consume();
-  }
-
-  if (!tokenIs(stream.peek(), "token", ")")) {
-    stream.restore(start);
-    return null;
-  }
-  stream.consume();
-
-  const body = parseStatement(stream);
-  if (!body) {
-    stream.restore(start);
-    return null;
-  }
-
-  return {
-    nodeCBK: "functionDeclaration",
-    meta: { name, params },
-    children: [body],
-  };
-}
-
-function parseStatement(stream) {
-  return (
-    parseCodeBlock(stream) ||
-    parseIfStatement(stream) ||
-    parseFunctionDeclaration(stream) ||
-    parseMemoryStatement(stream) ||
-    parseReturnStatement(stream)
-  );
-}
-
-function parse(tokenized) {
-  const stream = new TokenStream(tokenized);
-  const AST = { meta: {}, children: [] };
-  while (stream.peek()) {
-    const node = parseStatement(stream);
-    if (!node) {
-      stream.consume();
-      continue;
-    }
-    AST.children.push(node);
-  }
-  return AST;
-}
-
-function testParse(tokenized) {
-  const stream = new TokenStream(tokenized);
-  const result = [];
-  while (stream.peek()) {
-    const saved = stream.save();
-    const node = parseStatement(stream);
-    if (!node) {
       stream.restore(saved);
-      break;
     }
-    result.push(node.nodeCBK);
+
+    if (r === false) return R;
+
+    R.push(r);
   }
-  return result;
+
+  return R;
+}
+
+function parse(tokenized, selections = statments) {
+  /*
+
+Form:
+
+node => {
+
+nodeCBK : some name,
+
+meta : {metadata},
+
+childern : [more nodes]
+
+}
+
+*/
+
+  const stream = new TokenStream(tokenized);
+
+  let AST = {
+    meta: {},
+
+    childern: [],
+  };
+
+  while (stream.peek()) {
+    for (const selection in selections) {
+      const saved = stream.save();
+
+      if (selections[selection].test(stream, testParse)) {
+        stream.restore(saved);
+
+        let parsedR = selections[selection].parse(stream, parse);
+
+        if (parsedR.errorBool) continue;
+
+        AST.childern.push(parsedR.parsed);
+
+        break;
+      }
+
+      stream.restore(saved);
+    }
+  }
+
+  return AST;
 }
 
 export { parse, testParse, TokenStream };

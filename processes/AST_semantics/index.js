@@ -1,5 +1,5 @@
 function analyze(ast) {
-  // TODO: Implement AST semantic analysis
+  console.log(ast);
   return ast;
 }
 
