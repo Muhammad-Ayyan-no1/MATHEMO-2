@@ -24,6 +24,56 @@ For example for a simple statment    var name = data;   data and name are sepera
 
 */
 
+// Token Equvilence
+const TE = (() => {
+  function simpleTokenEquvilence(token, type, value) {
+    return token && token.type === type && token.value === value;
+  }
+
+  function allowedValueTE(token, type, valueFn) {
+    return token && token.type === type && valueFn(token.value);
+  }
+
+  function MultiTypesTEvalFN(token, types, valueFn) {
+    for (let i = 0; i < types.length; i++) {
+      if (allowedValueTE(token, types[i], valueFn)) return true;
+    }
+    return false;
+  }
+
+  function MultiTypesTEvalue(token, types, value) {
+    for (let i = 0; i < types.length; i++) {
+      if (simpleTokenEquvilence(token, types[i], value)) return true;
+    }
+    return false;
+  }
+
+  function mainTE(token, type, value) {
+    switch (Array.isArray(type) + "," + (typeof value === "function")) {
+      case "false,false":
+        return simpleTokenEquvilence(token, type, value);
+      case "true,false":
+        return MultiTypesTEvalue(token, type, value);
+      case "false,true":
+        return allowedValueTE(token, type, value);
+      case "true,true":
+        return MultiTypesTEvalFN(token, type, value);
+      default:
+        return false;
+    }
+  }
+
+  return mainTE;
+})();
+
+//modify token value
+function mtv(token, str, rep) {
+  return {
+    ...token,
+    value: str.replace(rep, token.value),
+  };
+}
+
 class TokenStream {
   constructor(tokens) {
     this.tokens = tokens;
@@ -63,20 +113,68 @@ integers positive/negative
     parse: () => {},
   },
 
+  name: {},
+
   positiveInteger: {
     // 123  or +123
+    test: (stream) => {
+      // let test = stream.save();
+      let t = stream.peek(0);
+      if (TE(t, "arithmeticOperator", "+")) {
+        stream.consume();
+        t = stream.peek();
+      } else if (TE(t, "arithmeticOperator", "-")) return false;
+      if (!TE(t, "number", () => true)) return false;
 
-    test: () => {},
+      if (!Number(t)) return false;
+      // stream.restore(test);
+      return true;
+    },
 
-    parse: () => {},
+    parse: (stream) => {
+      let t = stream.peek(0);
+      stream.consume();
+      return {
+        parsed: {
+          nodeCBK: "PosInt",
+          meta: {
+            value: t,
+          },
+          childern: [],
+        },
+      };
+    },
   },
 
-  negativeInteger: {
+  negativeInt: {
     // -123
+    test: (stream) => {
+      // let test = stream.save();
+      let t = stream.peek(0);
+      if (TE(t, "arithmeticOperator", "-")) {
+        stream.consume();
+        t = stream.peek();
+      } else if (TE(t, "arithmeticOperator", "+")) return false;
+      if (!TE(t, "number", () => true)) return false;
 
-    test: () => {},
+      if (!Number(t)) return false;
+      // stream.restore(test);
+      return true;
+    },
 
-    parse: () => {},
+    parse: (stream) => {
+      let t = stream.peek(0);
+      stream.consume();
+      return {
+        parsed: {
+          nodeCBK: "NegInt",
+          meta: {
+            value: mtv(t, "-$", "$"),
+          },
+          childern: [],
+        },
+      };
+    },
   },
 };
 
@@ -92,9 +190,31 @@ const statments = {
 
     */
 
-    test: (stream, testParse) => {},
+    test: (stream, testParse) => {
+      let t1 = stream.peek(0);
+      if (!TE(t1, "keyword", "mem")) return false;
+      let t3 = stream.peak(2);
+      if (!TE(t3, "asginmentOperator", "=")) return false;
 
-    parse: (stream, parse) => {},
+      let t2 = stream.peak(1); // name/location
+      let r_2_tstParse = testParse([t2], syntaxes);
+      if (r_2_tstParse[0] != "positiveInteger" || r_2_tstParse[0] != "name")
+        return false;
+
+      let t4 = stream.peak(3); // data to store
+      let r_4_tstParse = testParse([t4], syntaxes);
+      if (r_4_tstParse[0] != "data") return false;
+
+      return true;
+    },
+
+    parse: (stream, parse) => {
+      let name = stream.peak(1);
+      let parsedName = parse([name], syntaxes);
+
+      let data = stream.peak(3);
+      let parsedData = parse([data], syntaxes);
+    },
   },
 };
 

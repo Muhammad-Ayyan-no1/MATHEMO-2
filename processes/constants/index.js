@@ -35,6 +35,10 @@ const CBK_MAP = {
   // MATHEMO stuff / superoptimizer
   MaTHEmO: "Math Turring complete Hardware Emulation for Optimization",
   "v=P2": "2nd Production Version",
+
+  // Parser Nodes
+  PosInt: "Positive Integer",
+  NegInt: "Negative Integer",
 };
 
 const LOG_LEVELS = {
