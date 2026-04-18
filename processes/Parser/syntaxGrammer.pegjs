@@ -12,7 +12,7 @@ start
 = statment+ / extraToks
 
 statment
-= blockStatment / memStat / ifElseStatment / ifStatment / functionStat optionalStatementTerminator
+= blockStatment / memStat / ifElseStatment / ifStatment / functionStat optionalStatementTerminator / functionCall 
 
 
 functionAllowedStatments
@@ -37,10 +37,7 @@ prams
 = extraToks memName optionalComma extraToks
 
 args
-= extraToks callableNames optionalComma extraToks
-
-callableNames
-= data/memName
+= extraToks data optionalComma extraToks
 
 optionalComma
 = "," ? extraToks
@@ -90,7 +87,7 @@ ifElseStatment_fn
 }
 
 elseStatment
-= extraToks code:statment {
+= extraToks "else" extraToks code:statment {
     return {
         type : "elseCondition",
         value : code,
@@ -98,7 +95,7 @@ elseStatment
 }
 
 elseStatment_fn
-= extraToks code:functionAllowedStatments {
+= extraToks "else" extraToks code:functionAllowedStatments {
     return {
         type : "elseCondition",
         value : code,
@@ -136,7 +133,7 @@ memLoc
 = "x" i:PosInteger  {return {type : "location", value : i}}
 
 data
-= integer / rawPass
+= integer / rawPass / memName
 
 rawPass
   = "(" expr:innerExpression_rawPass ")" { return { type:"rawPass", value: expr }; }
