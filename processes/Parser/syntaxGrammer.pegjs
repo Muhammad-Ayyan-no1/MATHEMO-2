@@ -1,22 +1,24 @@
 /*
 function abc(a, b){
-mem x = 5;
+mem x1 = 5;
 mem a = 1;
-if (x) return x;
+if (x1) return x1;
 else return a;
 }
 abc(1,2);
+
+function abc(a, b){ mem x1 = 5; mem a = 1; if (x1) return x1; else return a; } abc(1,2);
 */
 
 start
 = statment+ / extraToks
 
 statment
-= blockStatment / memStat / ifElseStatment / ifStatment / functionStat optionalStatementTerminator / functionCall 
+= blockStatment / memStat / ifElseStatment / ifStatment / functionStat / functionCall optionalStatementTerminator 
 
 
 functionAllowedStatments
-= returnStat / blockStatment / memStat / ifElseStatment_fn / ifStatment_fn
+= returnStat / blockStatment_fn / memStat / ifElseStatment_fn / ifStatment_fn / functionCall optionalStatementTerminator
 
 returnStat
 = extraToks "return" extraToks memName extraToks optionalStatementTerminator
@@ -76,7 +78,7 @@ ifElseStatment
 }
 
 ifElseStatment_fn
-= ifPart:ifStatment elsePart:elseStatment_fn {
+= ifPart:ifStatment_fn elsePart:elseStatment_fn {
     return {
         type : "ifElseCondition",
         value : {
@@ -103,10 +105,23 @@ elseStatment_fn
 }
 
 ifCondition 
-= extraToks memName extraToks
+= extraToks data extraToks
 
 blockStatment
 = extraToks "{" statments:(statment:statment optionalStatementTerminator {
+    return {
+        type : "statment",
+        value : statment
+    }
+})*  "}" extraToks optionalStatementTerminator {
+    return {
+        type : "statments",
+        value : statments
+    }
+}
+
+blockStatment_fn
+= extraToks "{" statments:(statment:functionAllowedStatments optionalStatementTerminator {
     return {
         type : "statment",
         value : statment

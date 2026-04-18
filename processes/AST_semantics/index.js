@@ -1,5 +1,5 @@
 function analyze(ast) {
-  console.log(ast);
+  // console.log(ast);
   return ast;
 }
 
