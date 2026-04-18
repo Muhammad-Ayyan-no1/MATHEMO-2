@@ -1,7 +1,4 @@
-function parse(tokenized) {
-  // TODO: Implement parsing logic
-  return { type: "program", body: tokenized };
-}
+import { parse } from "./main";
 
 function create(ctx) {
   return {

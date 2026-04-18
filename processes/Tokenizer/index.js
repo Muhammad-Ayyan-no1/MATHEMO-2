@@ -1,6 +1,7 @@
+import { defaultTokenizer } from "./tokenizer.js";
+
 function tokenize(string) {
-  // TODO: Implement tokenization logic
-  return string.split(/\s+/);
+  return defaultTokenizer(string);
 }
 
 function create(ctx) {
