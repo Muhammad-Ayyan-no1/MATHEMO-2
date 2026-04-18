@@ -1,4 +1,12 @@
-const DEFAULT_LIBRARY_NAMES = ["chalk", "boxen", "ora", "inquirer", "peggy"];
+const DEFAULT_LIBRARY_NAMES = [
+  "chalk",
+  "boxen",
+  "ora",
+  "inquirer",
+  "peggy",
+  "fs",
+  "path",
+];
 
 const DEFAULT_FALLBACKS = {
   chalk: () => {

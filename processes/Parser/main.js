@@ -1,64 +1,28 @@
-let peggy;
+let peggy, fs, path;
 
 function safeLibrary(lib, name, fallback) {
   if (!lib || !lib.get) return fallback;
   return lib.get(name) || fallback;
 }
 
-const grammer = `
-start
-= memStat
-
-memStat 
-= extraToks "mem" extraToks n:memName extraToks "=" extraToks d:data extraToks optionalSemicoln {
-return {
-data : d,
-name : n
-}
-}
-
-memName
-= memLoc / literal
-
-memLoc
-= "x" i:PosInteger  {return {type : "location", value : i}}
-
-data
-= integer
-
-integer
-= PosInteger / NegInteger
-
-PosInteger
-= (i:[0-9]+   {return i.join("") })  / ("+" extraToks i:[0-9]+   {return i.join("") })   
-
-NegInteger
-= "-" extraToks i:[0-9]+ {return "-"+i.join("")}
-
-literal 
-= [A-Za-z_]+[_0-9A-Za-z]* { return text(); }
-
-extraToks
- = extraToksP1
-
-extraToksP1
-  = [ \\t\\r\\n]* { return ""; }
-  
-optionalSemicoln
- = ";"? extraToks {return "";}
-`;
+let grammer;
 let parser;
 
-function parse(str) {
-  // console.log(str);
-  return parser(str);
-}
+// function parse(str) {
+//   // console.log(str);
+//   return parser(str);
+// }
 
 function createParser(lib) {
   peggy = safeLibrary(lib, "peggy", null);
+  fs = safeLibrary(lib, "fs", null);
+  path = safeLibrary(lib, "path", null);
+
+  const grammerPath = path.join("./processes/Parser/syntaxGrammer.pegjs");
+  grammer = fs.readFileSync(grammerPath).toString("utf8");
   parser = peggy.generate(grammer).parse;
-  console.log("\n\n\n", parser);
   return {
+    // parse: () => "",
     parse: parser,
   };
 }
