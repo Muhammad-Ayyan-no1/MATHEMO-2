@@ -40,7 +40,9 @@ async function bootstrap() {
   });
 
   const tokenizer = await insManager.spawn(tokenizerModule, {});
-  const parser = await insManager.spawn(parserModule, {});
+  const parser = await insManager.spawn(parserModule, {
+    lib: library.ins,
+  });
   const astSemantics = await insManager.spawn(astSemanticsModule, {});
   const cas = await insManager.spawn(casModule, {});
   const optimizer = await insManager.spawn(optimizerModule, {});

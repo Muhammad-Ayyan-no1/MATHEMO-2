@@ -1,10 +1,13 @@
-import { parse } from "./main.js";
+import { createParser } from "./main.js";
 
 function create(ctx) {
+  const lib = ctx?.lib || null;
+  const parser = createParser(lib);
+
   return {
     cbk: "parser",
     id: `parser_${Date.now()}`,
-    ins: { parse },
+    ins: parser,
     init() {},
     despawn() {},
     exportState() {

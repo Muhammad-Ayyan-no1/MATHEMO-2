@@ -1,7 +1,8 @@
 import { defaultTokenizer } from "./tokenizer.js";
 
 function tokenize(string) {
-  return defaultTokenizer(string);
+  // return defaultTokenizer(string);
+  return string; // using peggy now      bec handwritten too verbose now
 }
 
 function create(ctx) {
