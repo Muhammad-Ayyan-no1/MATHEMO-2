@@ -17,8 +17,25 @@ The superoptimizer works on math and cas thus we require to transform all this i
 */
 
 function formMathAST(ast) {
-  printTree(ast);
-  return ast;
+  // printTree(ast);
+  const sampleAst = {
+    statements: [
+      {
+        type: "function",
+        name: "add",
+        parameters: ["x", "y"],
+        expression: "x + y",
+      },
+      {
+        type: "condition",
+        statement: "if",
+        Ifcondition: "x > 0",
+        IfassociatedCode: "positive",
+        ElseAssociatedCode: "negative",
+      },
+    ],
+  };
+  return sampleAst;
 }
 
 export { formMathAST };
