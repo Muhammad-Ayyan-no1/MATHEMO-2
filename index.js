@@ -8,7 +8,7 @@ import * as libModule from "./processes/automatic polly and library/index.js";
 import * as tokenizerModule from "./processes/Tokenizer/index.js";
 import * as parserModule from "./processes/Parser/index.js";
 import * as astSemanticsModule from "./processes/AST_semantics/index.js";
-import * as casModule from "./processes/Computerized Algebric System/main.js";
+import * as casModule from "./processes/Computerized Algebric System/index.js";
 import * as optimizerModule from "./processes/Optimizer/index.js";
 import * as codeGenModule from "./processes/CodeGen/index.js";
 import * as interpreterModule from "./processes/inturpreter/index.js";
@@ -44,7 +44,9 @@ async function bootstrap() {
     lib: library.ins,
   });
   const astSemantics = await insManager.spawn(astSemanticsModule, {});
-  const cas = await insManager.spawn(casModule, {});
+  const cas = await insManager.spawn(casModule, {
+    lib: library.ins,
+  });
   const optimizer = await insManager.spawn(optimizerModule, {});
   const codeGen = await insManager.spawn(codeGenModule, {});
   const interpreter = await insManager.spawn(interpreterModule, {});
@@ -101,7 +103,7 @@ async function bootstrap() {
           cbk: "cas",
           task: async (taskPrams) => {
             const mathAst = taskPrams.piplnVar.get("astSemantics");
-            return taskPrams.cas.resolveRecursions(mathAst);
+            return taskPrams.cas.formMathAst(mathAst);
           },
           prams: {},
         },

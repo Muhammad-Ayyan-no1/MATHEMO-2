@@ -6,6 +6,7 @@ const DEFAULT_LIBRARY_NAMES = [
   "peggy",
   "fs",
   "path",
+  "mathjs",
 ];
 
 const DEFAULT_FALLBACKS = {
