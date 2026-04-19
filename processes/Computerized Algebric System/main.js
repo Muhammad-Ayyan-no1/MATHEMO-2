@@ -62,6 +62,12 @@ const main = (mathjs, algebrite) => {
         this.node(arg),
       ]);
     }
+    function_callWithArgs(name, args = []) {
+      return new mathjs.FunctionNode(
+        new mathjs.SymbolNode(name),
+        (Array.isArray(args) ? args : [args]).map((a) => this.node(a)),
+      );
+    }
     //for any external callers
     substitude(target, replacement) {
       const rNode = this.node(replacement);
@@ -382,22 +388,132 @@ const main = (mathjs, algebrite) => {
       return result?.main ?? node;
     };
 
-    for (const statement of ast.statements) {
-      if (statement.type === "condition") {
-        chain.push(transpiler.condition(statement));
-      } else if (statement.type === "mem") {
-        chain.push(transpiler.mem(statement));
-      } else if (statement.type === "function") {
-        const rawFn = transpiler.function(statement);
-        const { main: simplified } = simplification.step(rawFn, []) ?? {
-          main: rawFn,
-        };
-        dependentFns.push(simplified ?? rawFn);
+    const asNode = (maybeNodeOrString) => {
+      if (maybeNodeOrString && typeof maybeNodeOrString === "object") {
+        if (maybeNodeOrString.isNode) return maybeNodeOrString;
       }
-    }
+      if (
+        typeof maybeNodeOrString === "string" ||
+        typeof maybeNodeOrString === "number"
+      )
+        return am.node(maybeNodeOrString);
+      throw new Error(
+        `CAS: expected expression node/string/number, got ${typeof maybeNodeOrString}`,
+      );
+    };
 
-    const materializedMain = chain.materialize(mergeSimplify);
-    const mainFn = am.function_ast("main", "memory", materializedMain);
+    const normalizeInjectedFn = (f) => {
+      if (f && typeof f === "object" && f.isNode) return f;
+      if (typeof f === "string") return am.node(f);
+      return f;
+    };
+
+    const mixByCond = (cond, thenExpr, elseExpr) =>
+      am.add_ast(
+        am.multiply_ast(cond, thenExpr),
+        am.multiply_ast(am.subtract_ast(1, cond), elseExpr),
+      );
+
+    const compileSubAstToMemoryExpr = (subAst) => {
+      // subAst is the semantics-produced { injectFns, statements } (can be empty)
+      if (!subAst || typeof subAst !== "object")
+        return { memoryExpr: am.node("memory"), returnExpr: null, deps: [] };
+
+      const localChain = new SubstitutionChain(am, pf);
+      const localDeps = [];
+      let returnExpr = null;
+
+      (subAst.injectFns ?? []).forEach((f) => {
+        const n = normalizeInjectedFn(f);
+        if (n) localDeps.push(n);
+      });
+
+      for (const statement of subAst.statements ?? []) {
+        if (returnExpr) break;
+
+        if (statement.type === "mem") {
+          localChain.push(transpiler.mem(statement));
+        } else if (statement.type === "function") {
+          const bodyAst = statement.body;
+          const {
+            memoryExpr: bodyMemoryExpr,
+            returnExpr: bodyReturnExpr,
+            deps: bodyDeps,
+          } = bodyAst &&
+          typeof bodyAst === "object" &&
+          Array.isArray(bodyAst.statements)
+            ? compileSubAstToMemoryExpr(bodyAst)
+            : {
+                memoryExpr: asNode(statement.expression),
+                returnExpr: null,
+                deps: [],
+              };
+          localDeps.push(...bodyDeps);
+
+          const fnExpr = bodyReturnExpr ?? bodyMemoryExpr;
+          const rawFn = am.function_ast(
+            statement.name,
+            statement.parameters,
+            fnExpr,
+          );
+          const { main: simplified } = simplification.step(rawFn, []) ?? {
+            main: rawFn,
+          };
+          localDeps.push(simplified ?? rawFn);
+        } else if (statement.type === "condition") {
+          const {
+            memoryExpr: thenMemoryExpr,
+            returnExpr: thenReturnExpr,
+            deps: thenDeps,
+          } = compileSubAstToMemoryExpr(statement.IfassociatedCode);
+          const {
+            memoryExpr: elseMemoryExpr,
+            returnExpr: elseReturnExpr,
+            deps: elseDeps,
+          } = statement.statement === "if"
+            ? { memoryExpr: am.node("memory"), returnExpr: null, deps: [] }
+            : compileSubAstToMemoryExpr(statement.ElseAssociatedCode);
+
+          localDeps.push(...thenDeps, ...elseDeps);
+
+          localChain.push(
+            mixByCond(statement.Ifcondition, thenMemoryExpr, elseMemoryExpr),
+          );
+
+          if (thenReturnExpr && elseReturnExpr) {
+            returnExpr = mixByCond(
+              statement.Ifcondition,
+              thenReturnExpr,
+              elseReturnExpr,
+            );
+          }
+        } else if (statement.type === "call") {
+          const callNode = am.function_callWithArgs(
+            statement.name,
+            statement.args ?? [],
+          );
+          mergeSimplify(callNode);
+        } else if (statement.type === "return") {
+          returnExpr = asNode(statement.expression);
+        }
+      }
+
+      const memoryExpr = localChain.materialize(mergeSimplify);
+      return { memoryExpr, returnExpr, deps: localDeps };
+    };
+
+    const {
+      memoryExpr: materializedMain,
+      returnExpr,
+      deps,
+    } = compileSubAstToMemoryExpr(ast);
+    dependentFns.push(...deps);
+
+    const mainFn = am.function_ast(
+      "main",
+      "memory",
+      returnExpr ?? materializedMain,
+    );
     return { main: mainFn, dependencies: dependentFns };
   }
 

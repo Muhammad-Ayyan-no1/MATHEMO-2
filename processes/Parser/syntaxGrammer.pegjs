@@ -15,8 +15,8 @@ statment
 functionAllowedStatments
 = returnStat / blockStatment_fn / memStat / ifElseStatment_fn / ifStatment_fn / c:functionCall optionalStatementTerminator { return c }
 returnStat
-= extraToks "return" extraToks n:memName extraToks optionalStatementTerminator {
-    return { type: "return", value: n }
+= extraToks "return" extraToks v:data extraToks optionalStatementTerminator {
+    return { type: "return", value: v }
 }
 functionStat
 = extraToks "function" extraToks n:memName extraToks "(" extraToks p:functionPrams extraToks ")" b:functionAllowedStatments {

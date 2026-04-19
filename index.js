@@ -53,95 +53,111 @@ async function bootstrap() {
 
   const piplnCond = await insManager.spawn(piplnCondModule, {});
 
+  const createMainPipeline = (inputTask) => [
+    {
+      id: "input",
+      cbk: "input",
+      task: inputTask,
+      prams: {},
+    },
+    {
+      id: "tokenize",
+      cbk: "tokenize",
+      task: async (taskPrams) => {
+        const input = taskPrams.piplnVar.get("input");
+        return taskPrams.tokenizer.tokenize(input);
+      },
+      prams: {},
+    },
+    {
+      id: "parse",
+      cbk: "parse",
+      task: async (taskPrams) => {
+        const tokens = taskPrams.piplnVar.get("tokenize");
+        return taskPrams.parser.parse(tokens);
+      },
+      prams: {},
+    },
+    {
+      id: "astSemantics",
+      cbk: "astSemantics",
+      task: async (taskPrams) => {
+        const ast = taskPrams.piplnVar.get("parse");
+        return taskPrams.astSemantics.analyze(ast);
+      },
+      prams: {},
+    },
+    {
+      id: "cas",
+      cbk: "cas",
+      task: async (taskPrams) => {
+        const mathAst = taskPrams.piplnVar.get("astSemantics");
+        return taskPrams.cas.formMathAst(mathAst);
+      },
+      prams: {},
+    },
+    {
+      id: "optimize",
+      cbk: "optimize",
+      task: async (taskPrams) => {
+        const optimizedAst = taskPrams.piplnVar.get("cas");
+        return taskPrams.optimizer.optimize(optimizedAst);
+      },
+      prams: {},
+    },
+    {
+      id: "chooseMode",
+      cbk: "chooseMode",
+      task: piplnCondModule.conditionIns,
+      prams: {
+        condition: async () => {
+          const { mode } = await cli.ins.prompt([
+            {
+              type: "list",
+              name: "mode",
+              message: "Choose output mode:",
+              choices: [
+                { name: "Compile to code", value: "compile" },
+                { name: "Interpret directly", value: "interpret" },
+              ],
+            },
+          ]);
+          return mode;
+        },
+        selections: {
+          compile: { name: "compile-pipeline" },
+          interpret: { name: "interpret-pipeline" },
+        },
+      },
+    },
+  ];
+
   const piplnMgr = await insManager.spawn(piplnMgrModule, {
     pipelines: {
-      "MaTHEmO v=p2": [
-        {
-          id: "input",
-          cbk: "input",
-          task: async (taskPrams) => {
-            const { input } = await taskPrams.cli.prompt([
-              {
-                type: "input",
-                name: "input",
-                message: "Enter the code string to process:",
-              },
-            ]);
-            return input;
+      "MaTHEmO v=p2 by file": createMainPipeline(async (taskPrams) => {
+        const fs = taskPrams.lib?.get?.("fs");
+        if (!fs || typeof fs.readFileSync !== "function") {
+          throw new Error("[input] fs module is unavailable");
+        }
+        const { filePath } = await taskPrams.cli.prompt([
+          {
+            type: "input",
+            name: "filePath",
+            message: "Enter a MATHEMO source file path:",
           },
-          prams: {},
-        },
-        {
-          id: "tokenize",
-          cbk: "tokenize",
-          task: async (taskPrams) => {
-            const input = taskPrams.piplnVar.get("input");
-            return taskPrams.tokenizer.tokenize(input);
+        ]);
+        return fs.readFileSync(filePath, "utf8");
+      }),
+      "MaTHEmO v=p2": createMainPipeline(async (taskPrams) => {
+        const { input } = await taskPrams.cli.prompt([
+          {
+            type: "input",
+            name: "input",
+            message: "Enter the code string to process:",
           },
-          prams: {},
-        },
-        {
-          id: "parse",
-          cbk: "parse",
-          task: async (taskPrams) => {
-            const tokens = taskPrams.piplnVar.get("tokenize");
-            return taskPrams.parser.parse(tokens);
-          },
-          prams: {},
-        },
-        {
-          id: "astSemantics",
-          cbk: "astSemantics",
-          task: async (taskPrams) => {
-            const ast = taskPrams.piplnVar.get("parse");
-            return taskPrams.astSemantics.analyze(ast);
-          },
-          prams: {},
-        },
-        {
-          id: "cas",
-          cbk: "cas",
-          task: async (taskPrams) => {
-            const mathAst = taskPrams.piplnVar.get("astSemantics");
-            return taskPrams.cas.formMathAst(mathAst);
-          },
-          prams: {},
-        },
-        {
-          id: "optimize",
-          cbk: "optimize",
-          task: async (taskPrams) => {
-            const optimizedAst = taskPrams.piplnVar.get("cas");
-            return taskPrams.optimizer.optimize(optimizedAst);
-          },
-          prams: {},
-        },
-        {
-          id: "chooseMode",
-          cbk: "chooseMode",
-          task: piplnCondModule.conditionIns,
-          prams: {
-            condition: async () => {
-              const { mode } = await taskPrams.cli.prompt([
-                {
-                  type: "list",
-                  name: "mode",
-                  message: "Choose output mode:",
-                  choices: [
-                    { name: "Compile to code", value: "compile" },
-                    { name: "Interpret directly", value: "interpret" },
-                  ],
-                },
-              ]);
-              return mode;
-            },
-            selections: {
-              compile: { name: "compile-pipeline" },
-              interpret: { name: "interpret-pipeline" },
-            },
-          },
-        },
-      ],
+        ]);
+        return input;
+      }),
       "compile-pipeline": [
         {
           id: "codeGen",
