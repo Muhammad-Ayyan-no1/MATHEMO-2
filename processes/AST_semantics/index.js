@@ -1,6 +1,7 @@
+import { formMathAST } from "./main.js";
 function analyze(ast) {
   // console.log(ast);
-  return ast;
+  return formMathAST(ast);
 }
 
 function create(ctx) {

@@ -1,12 +1,10 @@
-function generateCode(ast) {
-  return ast;
-}
+function resolveRecursions(MathAST) {}
 
 function create(ctx) {
   return {
-    cbk: "codeGen",
-    id: `codeGen_${Date.now()}`,
-    ins: { generateCode },
+    cbk: "cas",
+    id: `cas_${Date.now()}`,
+    ins: { resolveRecursions },
     init() {},
     despawn() {},
     exportState() {
