@@ -7,6 +7,7 @@ const DEFAULT_LIBRARY_NAMES = [
   "fs",
   "path",
   "mathjs",
+  "algebrite",
 ];
 
 const DEFAULT_FALLBACKS = {

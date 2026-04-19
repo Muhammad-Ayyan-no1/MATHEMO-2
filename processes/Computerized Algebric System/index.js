@@ -7,7 +7,8 @@ function safeLibrary(lib, name, fallback) {
 
 function createMain(lib) {
   const mathjs = safeLibrary(lib, "mathjs", null);
-  return main(mathjs);
+  const algebrite = safeLibrary(lib, "algebrite", null);
+  return main(mathjs, algebrite);
 }
 
 function create(ctx) {
